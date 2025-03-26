@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="description" content="Popolna spletna stran – Koledar s citati" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Popolna Spletna Stran – Koledar s citati</title>
+  <!-- Uvoz Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-bg: linear-gradient(135deg, #84fab0, #8fd3f4);
+      --container-bg: #fff;
+      --text-color: #333;
+      --nav-bg: #333;
+      --nav-text: #f2f2f2;
+      --nav-active-bg: #8fd3f4;
+      --nav-active-text: #333;
+      --card-bg: #f9f9f9;
+      --card-shadow: rgba(0, 0, 0, 0.1);
+      --transition-speed: 0.3s;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--primary-bg);
+      transition: background 0.5s, color 0.5s;
+      color: var(--text-color);
+    }
+    /* Login / Register */
+    #user-auth {
+      text-align: right;
+      padding: 10px;
+      background: #f5f5f5;
+    }
+    #user-auth input {
+      margin: 5px;
+      padding: 5px;
+      font-size: 14px;
+    }
+    #user-auth button {
+      margin: 5px;
+      padding: 5px 10px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    /* Navbar */
+    .navbar {
+      background-color: var(--nav-bg);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      display: flex;
+      justify-content: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .navbar a {
+      color: var(--nav-text);
+      padding: 14px 20px;
+      text-decoration: none;
+      text-align: center;
+      transition: background var(--transition-speed), color var(--transition-speed);
+      font-weight: bold;
+      margin: 0 5px;
+      border-radius: 4px;
+    }
+    .navbar a:hover {
+      background-color: #575757;
+    }
+    .navbar a.active {
+      background-color: var(--nav-active-bg);
+      color: var(--nav-active-text);
+    }
+    /* Container / tab-content */
+    .container {
+      width: 90%;
+      max-width: 1600px; /* Po želji povečate ali zmanjšate */
+      margin: 40px auto;
+      padding: 20px;
+      background: var(--container-bg);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      position: relative;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    h1 {
+      color: var(--text-color);
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    p {
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+    /* Izboljšan stil za prikaz citatov */
+    #quote-display, #modal-quote {
+      font-size: 20px;
+      font-style: italic;
+      padding: 20px;
+      background-color: #fff;
+      margin: 20px 0;
+      border-left: 7px solid var(--nav-active-bg);
+      border-radius: 5px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      color: var(--text-color);
+      position: relative;
+    }
+    /* Dodani citatni narekovaji pred in za vsebino */
+    #quote-display::before, #modal-quote::before {
+      content: "“";
+      font-size: 40px;
+      position: absolute;
+      left: 10px;
+      top: -10px;
+      color: var(--nav-active-bg);
+    }
+    #quote-display::after, #modal-quote::after {
+      content: "”";
+      font-size: 40px;
+      position: absolute;
+      right: 10px;
+      bottom: -10px;
+      color: var(--nav-active-bg);
+    }
+    /* Dark theme */
+    .dark-theme {
+      background: #333;
+      color: #eee;
+    }
+    .dark-theme .container {
+      background: #444;
+      color: #eee;
+    }
+    .dark-theme button {
+      background: #555;
+      color: #eee;
+    }
+    .dark-theme button:hover {
+      background: #666;
+    }
+    button {
+      padding: 8px 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+      transition: background var(--transition-speed);
+    }
+    button:hover {
+      background: #ddd;
+    }
+
+    /* Koledar: 7 stolpcev, zapolni razpoložljivo širino */
+    .calendar-container {
+      width: 100%;
+      margin-bottom: 10px;
+      /* Odstranili smo horizontalni scroll in min-width */
+    }
+    #calendar, #preview-calendar {
+      width: 100%;
+      display: grid;
+      /* Natančno 7 stolpcev */
+      grid-template-columns: repeat(7, 1fr);
+      gap: 20px;
+      margin-top: 20px;
+      padding: 10px;
+      opacity: 0;
+      animation: fadeIn 0.5s forwards;
+      /* Elemente poravnamo na sredino stolpca */
+      justify-items: center;
+      align-items: start;
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+    /* Dnevne kartice (canvas) */
+    .day-canvas {
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      cursor: pointer;
+      display: block;
+    }
+
+    /* Modal in ostalo */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      animation: fadeInModal 0.4s forwards;
+      backdrop-filter: blur(3px);
+    }
+    @keyframes fadeInModal {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .modal-content {
+      background: var(--container-bg);
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 500px;
+      width: 90%;
+      text-align: center;
+      position: relative;
+      animation: slideDown 0.4s forwards;
+    }
+    @keyframes slideDown {
+      from {
+        transform: translateY(-20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #aaa;
+      cursor: pointer;
+      transition: color var(--transition-speed);
+    }
+    .close-btn:hover {
+      color: #333;
+    }
+    /* Month navigation */
+    #basic-month-navigation, #month-navigation {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    #month-navigation button,
+    #basic-month-navigation button {
+      margin: 0 10px;
+    }
+    /* Form - Custom Calendar */
+    #custom-calendar form {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 20px;
+    }
+    #custom-calendar label {
+      margin-right: 5px;
+    }
+    .days-of-week {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+      padding: 10px;
+      background: #eee;
+      border-radius: 6px;
+      font-weight: bold;
+      text-align: center;
+    }
+    /* Cards container */
+    .cards-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      overflow: hidden;
+      transition: transform var(--transition-speed);
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+    .card-content {
+      padding: 16px;
+      flex: 1;
+    }
+    .card-title {
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: var(--text-color);
+      font-weight: bold;
+    }
+    .card-desc {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Login / Register sekcija -->
+  <div id="user-auth">
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Geslo" />
+    <button id="register-btn">Registriraj se</button>
+    <button id="login-btn">Prijavi se</button>
+    <button id="logout-btn" style="display:none;">Odjavi se</button>
+  </div>
+
+  <!-- Navigacija (navbar) -->
+  <div class="navbar">
+    <a href="#" data-tab="home" class="active">Domov</a>
+    <a href="#" data-tab="calendar">Naš koledar</a>
+    <a href="#" data-tab="my-quotes">Moji citati</a>
+    <a href="#" data-tab="about">O nas</a>
+    <a href="#" data-tab="custom-calendar">Custom Calendar Creation</a>
+  </div>
+
+  <div class="container">
+    <!-- Domov -->
+    <div id="home" class="tab-content active">
+      <h1>Dobrodošli!</h1>
+      <p>To je prilagodljiva spletna stran, ki vam omogoča ogled in urejanje koledarjev s citati.</p>
+    </div>
+
+    <!-- Koledar (osnovni) -->
+    <div id="calendar-tab" class="tab-content">
+      <h1>Koledar s citati</h1>
+      <p>Predstavitev osnovnega koledarja, ki ga ponujamo.</p>
+      <button id="theme-toggle">Preklopi temo</button>
+      <div id="basic-month-navigation">
+        <button id="basic-prev-month-btn">Prejšnji mesec</button>
+        <span id="basic-current-month-display" style="font-size: 18px; font-weight: bold;"></span>
+        <button id="basic-next-month-btn">Naslednji mesec</button>
+      </div>
+      <div class="calendar-container">
+        <div id="calendar"></div>
+      </div>
+    </div>
+
+    <!-- Moji citati -->
+    <div id="my-quotes" class="tab-content">
+      <h1>Moji citati</h1>
+      <div id="quote-generator">
+        <button id="generate-quote-btn">Generiraj nov citat</button>
+        <p id="quote-display">Klikni gumb, da generiraš nov citat!</p>
+        <button id="save-quote-btn">Shrani citat</button>
+      </div>
+      <h2>Zgodovina citatov</h2>
+      <div id="quote-history"></div>
+    </div>
+
+    <!-- O nas -->
+    <div id="about" class="tab-content">
+      <h1>O nas</h1>
+      <p>Naša ekipa se ukvarja z razvojem inovativnih rešitev za prilagodljiv prikaz vsebin.</p>
+    </div>
+
+    <!-- Custom Calendar Creation -->
+    <div id="custom-calendar" class="tab-content">
+      <h1>Custom Calendar Creation</h1>
+      <p>Spodaj lahko izberete že pripravljene predloge ali pa sami prilagodite mesec in leto.</p>
+      <div class="cards-container" id="cards-container">
+        <div class="card" onclick="createCalendarPreview('personalized')">
+          <img src="https://media.artifactuprising.com/media/livepreview/custom-photo-calendar-serif-wood.jpg?width=2100&auto=webp" alt="Personalized Calendar" />
+          <div class="card-content">
+            <div class="card-title">Personalized calendar creator</div>
+            <div class="card-desc">Craft a unique calendar with your favorite quotes.</div>
+          </div>
+        </div>
+      </div>
+      <form id="custom-calendar-form">
+        <label for="custom-month">Mesec:</label>
+        <select id="custom-month">
+          <option value="0">Januar</option>
+          <option value="1">Februar</option>
+          <option value="2">Marec</option>
+          <option value="3">April</option>
+          <option value="4">Maj</option>
+          <option value="5">Junij</option>
+          <option value="6">Julij</option>
+          <option value="7">Avgust</option>
+          <option value="8">September</option>
+          <option value="9">Oktober</option>
+          <option value="10">November</option>
+          <option value="11">December</option>
+        </select>
+        <label for="custom-year">Leto:</label>
+        <select id="custom-year"></select>
+        <label for="custom-category">Kategorija:</label>
+        <select id="custom-category">
+          <option value="motivational">Motivational</option>
+          <option value="family">Family</option>
+          <option value="seasonal">Seasonal</option>
+          <option value="creative">Creative</option>
+        </select>
+        <button type="button" id="generate-custom-calendar-btn">Generiraj koledar</button>
+      </form>
+      <div id="month-navigation">
+        <button type="button" id="prev-month-btn">Prejšnji mesec</button>
+        <button type="button" id="next-month-btn">Naslednji mesec</button>
+      </div>
+      <div id="preview-section" style="display:none;">
+        <h2>Predogled koledarja</h2>
+        <button id="generate-api-quotes-btn">Generiraj API citate za vse dneve</button>
+        <button id="print-calendar-btn">Natisni koledar</button>
+        <div class="days-of-week" id="days-of-week-preview"></div>
+        <div class="calendar-container">
+          <div id="preview-calendar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal za urejanje citatov -->
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <span class="close-btn" id="close-btn">&times;</span>
+      <h2>Podrobnosti o citatu</h2>
+      <p id="modal-quote"></p>
+      <div id="edit-section">
+        <textarea id="custom-quote" rows="3"></textarea>
+        <br />
+        <button id="save-quote">Shrani citat</button>
+      </div>
+      <div>
+        <button id="fetch-api-quote">Pridobi API citat</button>
+        <button id="share-quote">Deli na Twitterju</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ----------------------------
+    // 1) Globalne spremenljivke za citate iz JSON
+    // ----------------------------
+    let quotes = {};
+    let seasonalQuotes = {};
+
+    // ----------------------------
+    // 2) Funkcija za nalaganje JSON datoteke
+    // ----------------------------
+    async function loadQuotesFromJSON() {
+      try {
+        // Popravljeno ime datoteke: zdaj Citati.json
+        const response = await fetch('Citati.json'); 
+        if (!response.ok) {
+          throw new Error("Napaka pri nalaganju JSON datoteke");
+        }
+        const data = await response.json();
+        quotes = data;
+        seasonalQuotes = data.seasonalQuotes || {};
+      } catch (err) {
+        console.error("Napaka pri nalaganju JSON:", err);
+      }
+    }
+
+    // ----------------------------
+    // 3) Dodatne globalne spremenljivke in funkcije
+    // ----------------------------
+    const monthNamesFull = ["Januar","Februar","Marec","April","Maj","Junij","Julij","Avgust","September","Oktober","November","December"];
+    const dayNames = ["Pon", "Tor", "Sre", "Čet", "Pet", "Sob", "Ned"];
+
+    // Večji canvas za lažje branje
+    function createDayCanvas(day, year, month, text) {
+      const canvas = document.createElement("canvas");
+      canvas.classList.add("day-canvas");
+      // Povečamo dimenzije, da je tekst lažje berljiv (prilagodite po želji)
+      canvas.width = 200;
+      canvas.height = 280;
+
+      const ctx = canvas.getContext("2d");
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, "#84fab0");
+      gradient.addColorStop(1, "#8fd3f4");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Obroba
+      ctx.strokeStyle = "#ddd";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+      // Header: datum dneva
+      ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+      ctx.fillRect(10, 10, canvas.width - 20, 40);
+      ctx.font = "bold 20px Roboto";
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.fillText(day + ". " + monthNamesFull[month].toUpperCase(), canvas.width / 2, 38);
+
+      // Območje za citat (belo ozadje z obrobo)
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(10, canvas.height - 160, canvas.width - 20, 150);
+      ctx.strokeStyle = "#ccc";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(10, canvas.height - 160, canvas.width - 20, 150);
+
+      // Priprava za izris citata
+      const quoteX = 15;
+      const quoteY = canvas.height - 135;
+      const quoteWidth = canvas.width - 30;
+      const lineHeight = 22;
+      ctx.font = "16px Roboto";
+      ctx.fillStyle = "#333";
+      ctx.textAlign = "left";
+
+      function wrapText(text, x, y, maxWidth, lineHeight) {
+        const words = text.split(' ');
+        let line = '';
+        for (let n = 0; n < words.length; n++) {
+          let testLine = line + words[n] + ' ';
+          let metrics = ctx.measureText(testLine);
+          let testWidth = metrics.width;
+          if (testWidth > maxWidth && n > 0) {
+            ctx.fillText(line, x, y);
+            line = words[n] + ' ';
+            y += lineHeight;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, x, y);
+      }
+      wrapText(text, quoteX, quoteY, quoteWidth, lineHeight);
+
+      return canvas;
+    }
+
+    // Funkcije za shranjevanje in branje citatov v localStorage
+    function saveQuote(year, month, day, quote) {
+      let savedQuotes = JSON.parse(localStorage.getItem("savedQuotes")) || {};
+      const key = `${year}-${month}`;
+      if (!savedQuotes[key]) savedQuotes[key] = {};
+      savedQuotes[key][day] = quote;
+      localStorage.setItem("savedQuotes", JSON.stringify(savedQuotes));
+    }
+    function getStoredQuote(year, month, day) {
+      const savedQuotes = JSON.parse(localStorage.getItem("savedQuotes")) || {};
+      const key = `${year}-${month}`;
+      return savedQuotes[key] ? savedQuotes[key][day] : null;
+    }
+
+    // ----------------------------
+    // 4) Funkcije za generiranje koledarja
+    // ----------------------------
+    let basicCalendarYear = new Date().getFullYear();
+    let basicCalendarMonth = new Date().getMonth();
+
+    function updateBasicMonthDisplay() {
+      const display = document.getElementById("basic-current-month-display");
+      const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", "Julij", "Avgust", "September", "Oktober", "November", "December"];
+      display.textContent = monthNames[basicCalendarMonth] + " " + basicCalendarYear;
+    }
+
+    function generateBasicCalendar() {
+      const calendarDiv = document.getElementById("calendar");
+      if (!calendarDiv) return;
+      calendarDiv.style.opacity = 0;
+      setTimeout(() => {
+        calendarDiv.innerHTML = "";
+        const selectedYear = basicCalendarYear;
+        const selectedMonth = basicCalendarMonth;
+        updateBasicMonthDisplay();
+        const selectedCategory = "motivational";
+        const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        
+        for (let i = 1; i <= daysInMonth; i++) {
+          let storedQuote = getStoredQuote(selectedYear, selectedMonth, i);
+          if (!storedQuote) {
+            let catQuotes = quotes[selectedCategory] || [];
+            if (catQuotes.length === 0) {
+              catQuotes = ["Ni naloženih citatov."];
+            }
+            storedQuote = catQuotes[Math.floor(Math.random() * catQuotes.length)];
+            saveQuote(selectedYear, selectedMonth, i, storedQuote);
+          }
+          const dayCanvas = createDayCanvas(i, selectedYear, selectedMonth, storedQuote);
+          calendarDiv.appendChild(dayCanvas);
+        }
+        calendarDiv.style.opacity = 1;
+      }, 300);
+    }
+
+    function generateCalendarPreviewWithParams(year, month, category) {
+      const container = document.getElementById("preview-calendar");
+      const daysOfWeekDiv = document.getElementById("days-of-week-preview");
+      if (!container) return;
+      daysOfWeekDiv.innerHTML = "";
+      dayNames.forEach(dn => {
+        const dayNameDiv = document.createElement("div");
+        dayNameDiv.textContent = dn;
+        daysOfWeekDiv.appendChild(dayNameDiv);
+      });
+      container.style.opacity = 0;
+      setTimeout(() => {
+        container.innerHTML = "";
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        for (let i = 1; i <= daysInMonth; i++) {
+          let storedQuote = getStoredQuote(year, month, i);
+          if (!storedQuote) {
+            let catQuotes = [];
+            if (category === "seasonal") {
+              let season;
+              if (month === 11 || month === 0 || month === 1) {
+                season = "winter";
+              } else if (month >= 2 && month <= 4) {
+                season = "spring";
+              } else if (month >= 5 && month <= 7) {
+                season = "summer";
+              } else if (month >= 8 && month <= 10) {
+                season = "autumn";
+              }
+              if (season && seasonalQuotes[season]) {
+                catQuotes = seasonalQuotes[season];
+              } else {
+                catQuotes = quotes["seasonal"] || [];
+              }
+            } else {
+              catQuotes = quotes[category] || [];
+            }
+            if (catQuotes.length === 0) {
+              catQuotes = ["Ni naloženih citatov."];
+            }
+            storedQuote = catQuotes[Math.floor(Math.random() * catQuotes.length)];
+            saveQuote(year, month, i, storedQuote);
+          }
+          const dayCanvas = createDayCanvas(i, year, month, storedQuote);
+          const dayDiv = document.createElement("div");
+          dayDiv.dataset.day = i;
+          dayDiv.dataset.year = year;
+          dayDiv.dataset.month = month;
+          dayDiv.appendChild(dayCanvas);
+          dayDiv.addEventListener("click", () => {
+            openModal(dayDiv, storedQuote);
+          });
+          container.appendChild(dayDiv);
+        }
+        container.style.opacity = 1;
+      }, 300);
+    }
+
+    function previousMonth() {
+      const monthSel = document.getElementById("custom-month");
+      const yearSel = document.getElementById("custom-year");
+      let month = parseInt(monthSel.value, 10);
+      let year = parseInt(yearSel.value, 10);
+      if (month === 0) {
+        month = 11;
+        year--;
+        yearSel.value = year;
+      } else {
+        month--;
+      }
+      monthSel.value = month;
+      generateCustomCalendar();
+    }
+    function nextMonth() {
+      const monthSel = document.getElementById("custom-month");
+      const yearSel = document.getElementById("custom-year");
+      let month = parseInt(monthSel.value, 10);
+      let year = parseInt(yearSel.value, 10);
+      if (month === 11) {
+        month = 0;
+        year++;
+        yearSel.value = year;
+      } else {
+        month++;
+      }
+      monthSel.value = month;
+      generateCustomCalendar();
+    }
+    function generateCustomCalendar() {
+      localStorage.removeItem("savedQuotes");
+      const monthSel = document.getElementById("custom-month");
+      const yearSel = document.getElementById("custom-year");
+      const catSel = document.getElementById("custom-category");
+      if (!monthSel || !yearSel || !catSel) return;
+      const selectedMonth = parseInt(monthSel.value, 10);
+      const selectedYear = parseInt(yearSel.value, 10);
+      const selectedCategory = catSel.value;
+      document.getElementById("preview-section").style.display = "block";
+      generateCalendarPreviewWithParams(selectedYear, selectedMonth, selectedCategory);
+    }
+
+    async function generateAPICustomQuotes() {
+      const API_NINJAS_KEY = 'JGJq93bRsJ9c08RgBF2gtg==Fu48GyRk0JBZnJfU';
+      const dayElements = document.querySelectorAll("#preview-calendar > div");
+      for (const dayEl of dayElements) {
+        try {
+          const response = await fetch("https://api.api-ninjas.com/v1/quotes", {
+            method: 'GET',
+            headers: { 'X-Api-Key': API_NINJAS_KEY }
+          });
+          const data = await response.json();
+          if (data.length > 0) {
+            const apiQuote = data[0].quote;
+            dayEl.querySelector("canvas").remove();
+            const newCanvas = createDayCanvas(dayEl.dataset.day, dayEl.dataset.year, dayEl.dataset.month, apiQuote);
+            dayEl.appendChild(newCanvas);
+            saveQuote(dayEl.dataset.year, dayEl.dataset.month, dayEl.dataset.day, apiQuote);
+          }
+        } catch (err) {
+          console.error("Napaka pri API klicu za dan " + dayEl.dataset.day, err);
+        }
+      }
+    }
+
+    // ----------------------------
+    // 5) Modal za urejanje citatov
+    // ----------------------------
+    let currentDayDiv = null;
+    const modal = document.getElementById("modal");
+    const modalQuote = document.getElementById("modal-quote");
+    const closeBtn = document.getElementById("close-btn");
+    const customQuoteInput = document.getElementById("custom-quote");
+    const saveQuoteBtn2 = document.getElementById("save-quote");
+    const fetchApiQuoteBtn = document.getElementById("fetch-api-quote");
+    const shareQuoteBtn = document.getElementById("share-quote");
+
+    function openModal(dayEl, quote) {
+      currentDayDiv = dayEl;
+      modalQuote.textContent = quote;
+      customQuoteInput.value = quote;
+      modal.style.display = "flex";
+    }
+    closeBtn.addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+    window.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.style.display = "none";
+      }
+    });
+    saveQuoteBtn2.addEventListener("click", () => {
+      if (currentDayDiv) {
+        const day = currentDayDiv.dataset.day;
+        const month = currentDayDiv.dataset.month;
+        const year = currentDayDiv.dataset.year;
+        const newQuote = customQuoteInput.value;
+        saveQuote(year, month, day, newQuote);
+        currentDayDiv.querySelector("canvas").remove();
+        const newCanvas = createDayCanvas(day, year, month, newQuote);
+        currentDayDiv.appendChild(newCanvas);
+        modalQuote.textContent = newQuote;
+      }
+    });
+    fetchApiQuoteBtn.addEventListener("click", () => {
+      const API_NINJAS_KEY = 'JGJq93bRsJ9c08RgBF2gtg==Fu48GyRk0JBZnJfU';
+      fetch("https://api.api-ninjas.com/v1/quotes", {
+        method: 'GET',
+        headers: { 'X-Api-Key': API_NINJAS_KEY }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.length > 0) {
+          const apiQuote = data[0].quote;
+          modalQuote.textContent = apiQuote;
+          customQuoteInput.value = apiQuote;
+          if (currentDayDiv) {
+            const day = currentDayDiv.dataset.day;
+            const month = currentDayDiv.dataset.month;
+            const year = currentDayDiv.dataset.year;
+            saveQuote(year, month, day, apiQuote);
+            currentDayDiv.querySelector("canvas").remove();
+            const newCanvas = createDayCanvas(day, year, month, apiQuote);
+            currentDayDiv.appendChild(newCanvas);
+          }
+        } else {
+          alert("Ni bilo najdenih citatov.");
+        }
+      })
+      .catch(err => {
+        alert("Napaka pri pridobivanju citata iz API-ja.");
+        console.error(err);
+      });
+    });
+    shareQuoteBtn.addEventListener("click", () => {
+      const text = encodeURIComponent(modalQuote.textContent);
+      const url = encodeURIComponent(window.location.href);
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+      window.open(twitterUrl, "_blank");
+    });
+
+    async function generateUserQuote() {
+      const API_NINJAS_KEY = 'JGJq93bRsJ9c08RgBF2gtg==Fu48GyRk0JBZnJfU';
+      try {
+        const response = await fetch("https://api.api-ninjas.com/v1/quotes", {
+          method: 'GET',
+          headers: { 'X-Api-Key': API_NINJAS_KEY }
+        });
+        const data = await response.json();
+        if (data.length > 0) {
+          const newQuote = data[0].quote;
+          document.getElementById("quote-display").textContent = newQuote;
+        } else {
+          document.getElementById("quote-display").textContent = "Ni bilo najdenih citatov.";
+        }
+      } catch (error) {
+        console.error("Napaka pri generiranju citata:", error);
+        document.getElementById("quote-display").textContent = "Prišlo je do napake!";
+      }
+    }
+
+    // ----------------------------
+    // 6) Inicializacija ob nalaganju DOM-ja
+    // ----------------------------
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Najprej naloži podatke iz JSON (Citati.json)
+      await loadQuotesFromJSON();
+      console.log("Naloženi citati:", quotes);
+
+      const navLinks = document.querySelectorAll('.navbar a');
+      const tabContents = document.querySelectorAll('.tab-content');
+      navLinks.forEach(link => {
+        link.addEventListener("click", function(e) {
+          e.preventDefault();
+          navLinks.forEach(l => l.classList.remove("active"));
+          this.classList.add("active");
+          tabContents.forEach(tab => tab.classList.remove("active"));
+          const target = this.getAttribute("data-tab");
+          if (target === "calendar") {
+            document.getElementById("calendar-tab").classList.add("active");
+            generateBasicCalendar();
+          } else {
+            document.getElementById(target).classList.add("active");
+            if (target === "my-quotes") displayQuoteHistory();
+          }
+        });
+      });
+
+      // Inicialno naloži aktivni tab
+      const activeTab = document.querySelector('.navbar a.active').getAttribute("data-tab");
+      if (activeTab === "calendar") {
+        generateBasicCalendar();
+      }
+
+      // Funkcija za prikaz zgodovine citatov
+      function displayQuoteHistory() {
+        let quotesHistory = JSON.parse(localStorage.getItem("userQuotes") || "[]");
+        const historyDiv = document.getElementById("quote-history");
+        historyDiv.innerHTML = "";
+        if (quotesHistory.length === 0) {
+          historyDiv.textContent = "Ni shranjenih citatov.";
+          return;
+        }
+        const ul = document.createElement("ul");
+        quotesHistory.forEach(item => {
+          const li = document.createElement("li");
+          const date = new Date(item.date).toLocaleString();
+          li.textContent = `${item.quote} (${date})`;
+          ul.appendChild(li);
+        });
+        historyDiv.appendChild(ul);
+      }
+
+      // Napolnimo select za leto v custom koledarju
+      const customYearSelect = document.getElementById("custom-year");
+      if (customYearSelect) {
+        const currentYear = new Date().getFullYear();
+        for (let y = currentYear - 2; y <= currentYear + 3; y++) {
+          const opt = document.createElement("option");
+          opt.value = y;
+          opt.textContent = y;
+          if (y === currentYear) opt.selected = true;
+          customYearSelect.appendChild(opt);
+        }
+      }
+
+      updateBasicMonthDisplay();
+      displayQuoteHistory();
+
+      document.getElementById("basic-prev-month-btn").addEventListener("click", () => {
+        if (basicCalendarMonth === 0) {
+          basicCalendarMonth = 11;
+          basicCalendarYear--;
+        } else {
+          basicCalendarMonth--;
+        }
+        generateBasicCalendar();
+      });
+      document.getElementById("basic-next-month-btn").addEventListener("click", () => {
+        if (basicCalendarMonth === 11) {
+          basicCalendarMonth = 0;
+          basicCalendarYear++;
+        } else {
+          basicCalendarMonth++;
+        }
+        generateBasicCalendar();
+      });
+
+      const generateBtn = document.getElementById("generate-quote-btn");
+      if (generateBtn) generateBtn.addEventListener("click", generateUserQuote);
+
+      const saveQuoteBtn = document.getElementById("save-quote-btn");
+      if (saveQuoteBtn) {
+        saveQuoteBtn.addEventListener("click", () => {
+          const quote = document.getElementById("quote-display").textContent;
+          if (quote && quote !== "Klikni gumb, da generiraš nov citat!") {
+            // Shrani v localStorage
+            function saveUserQuote(quote) {
+              let quotesHistory = JSON.parse(localStorage.getItem("userQuotes") || "[]");
+              quotesHistory.push({ quote: quote, date: new Date().toISOString() });
+              localStorage.setItem("userQuotes", JSON.stringify(quotesHistory));
+              displayQuoteHistory();
+            }
+            saveUserQuote(quote);
+            alert("Citat shranjen!");
+          } else {
+            alert("Najprej generiraj citat.");
+          }
+        });
+      }
+
+      const generateAPIBtn = document.getElementById("generate-api-quotes-btn");
+      if (generateAPIBtn) generateAPIBtn.addEventListener("click", generateAPICustomQuotes);
+
+      const generateCustomBtn = document.getElementById("generate-custom-calendar-btn");
+      if (generateCustomBtn) generateCustomBtn.addEventListener("click", generateCustomCalendar);
+
+      const prevMonthBtn = document.getElementById("prev-month-btn");
+      if (prevMonthBtn) prevMonthBtn.addEventListener("click", previousMonth);
+
+      const nextMonthBtn = document.getElementById("next-month-btn");
+      if (nextMonthBtn) nextMonthBtn.addEventListener("click", nextMonth);
+
+      const printCalendarBtn = document.getElementById("print-calendar-btn");
+      if (printCalendarBtn) printCalendarBtn.addEventListener("click", () => { window.print(); });
+
+      const themeToggle = document.getElementById("theme-toggle");
+      if (themeToggle) {
+        themeToggle.addEventListener("click", () => {
+          document.body.classList.toggle("dark-theme");
+        });
+      }
+    });
+  </script>
+</body>
+</html>
