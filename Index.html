@@ -159,24 +159,20 @@
     button:hover {
       background: #ddd;
     }
-
     /* Koledar: 7 stolpcev, zapolni razpoložljivo širino */
     .calendar-container {
       width: 100%;
       margin-bottom: 10px;
-      /* Odstranili smo horizontalni scroll in min-width */
     }
     #calendar, #preview-calendar {
       width: 100%;
       display: grid;
-      /* Natančno 7 stolpcev */
       grid-template-columns: repeat(7, 1fr);
       gap: 20px;
       margin-top: 20px;
       padding: 10px;
       opacity: 0;
       animation: fadeIn 0.5s forwards;
-      /* Elemente poravnamo na sredino stolpca */
       justify-items: center;
       align-items: start;
     }
@@ -190,7 +186,6 @@
       cursor: pointer;
       display: block;
     }
-
     /* Modal in ostalo */
     .modal {
       position: fixed;
@@ -331,7 +326,6 @@
     <a href="#" data-tab="home" class="active">Domov</a>
     <a href="#" data-tab="calendar">Naš koledar</a>
     <a href="#" data-tab="my-quotes">Moji citati</a>
-    <a href="#" data-tab="about">O nas</a>
     <a href="#" data-tab="custom-calendar">Custom Calendar Creation</a>
   </div>
 
@@ -339,7 +333,7 @@
     <!-- Domov -->
     <div id="home" class="tab-content active">
       <h1>Dobrodošli!</h1>
-      <p>To je prilagodljiva spletna stran, ki vam omogoča ogled in urejanje koledarjev s citati.</p>
+      <p>Ta spletna stran vam omogoač ogled in urejanje kolendarja s citati.</p>
     </div>
 
     <!-- Koledar (osnovni) -->
@@ -484,7 +478,7 @@
     function createDayCanvas(day, year, month, text) {
       const canvas = document.createElement("canvas");
       canvas.classList.add("day-canvas");
-      // Povečamo dimenzije, da je tekst lažje berljiv (prilagodite po želji)
+      // Povečamo dimenzije, da je tekst lažje berljiv
       canvas.width = 200;
       canvas.height = 280;
 
@@ -826,6 +820,36 @@
     // 6) Inicializacija ob nalaganju DOM-ja
     // ----------------------------
     document.addEventListener("DOMContentLoaded", async () => {
+      // Login / Register funkcionalnost
+      document.getElementById("register-btn").addEventListener("click", function() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        if (!email || !password) {
+          alert("Prosimo, vnesite email in geslo.");
+          return;
+        }
+        // Preprosto shranjevanje uporabnika v localStorage (samo primer, ne za produkcijo)
+        localStorage.setItem("user", JSON.stringify({ email, password }));
+        alert("Registracija uspešna!");
+      });
+
+      document.getElementById("login-btn").addEventListener("click", function() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+        if (storedUser && storedUser.email === email && storedUser.password === password) {
+          alert("Prijava uspešna!");
+          document.getElementById("logout-btn").style.display = "inline-block";
+        } else {
+          alert("Napačen email ali geslo.");
+        }
+      });
+
+      document.getElementById("logout-btn").addEventListener("click", function() {
+        alert("Odjavili ste se.");
+        document.getElementById("logout-btn").style.display = "none";
+      });
+
       // Najprej naloži podatke iz JSON (Citati.json)
       await loadQuotesFromJSON();
       console.log("Naloženi citati:", quotes);
